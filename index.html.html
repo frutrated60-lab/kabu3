@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>株式投資人生シミュレーション：日本株相場を駆け抜けろ</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col items-center justify-center p-4">
+
+    <!-- メインコンテナ -->
+    <div id="game-container" class="w-full max-w-4xl bg-slate-800 rounded-xl shadow-2xl border border-slate-700 overflow-hidden flex flex-col">
+        
+        <!-- ヘッダー -->
+        <header class="bg-slate-900 px-6 py-4 border-b border-slate-700 flex justify-between items-center">
+            <h1 class="text-xl font-bold tracking-wider text-amber-400">📈 株式投資人生シミュレーション</h1>
+            <div id="age-display" class="text-lg font-semibold bg-slate-800 px-4 py-1 rounded-full border border-slate-700">
+                25歳0ヶ月 <span class="text-xs text-slate-400">(経過: 0ヶ月)</span>
+            </div>
+        </header>
+
+        <!-- スタート画面 -->
+        <div id="start-screen" class="p-8 flex flex-col items-center justify-center text-center space-y-6">
+            <div class="max-w-xl space-y-3">
+                <h2 class="text-2xl font-bold text-white">相場の波を乗りこなし、億り人を目指せ</h2>
+                <p class="text-slate-300 text-sm leading-relaxed">
+                    あなたは25歳の個人投資家。30年間の投資人生（55歳まで）を駆け抜けます。<br>
+                    毎月訪れる日々の出来事、そして3ヶ月に一度の重大な選択……。<br>
+                    あなたの判断力が、総資産とメンタルを左右します。
+                </p>
+            </div>
+            <button onclick="startGame()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-8 py-3 rounded-lg shadow-lg transition duration-200 cursor-pointer text-lg">
+                投資人生をスタートする
+            </button>
+        </div>
+
+        <!-- ゲームプレイ画面 (初期非表示) -->
+        <div id="game-screen" class="hidden flex flex-col flex-1 p-6 space-y-6">
+            
+            <!-- ステータス表示バー -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-slate-900/80 p-4 rounded-lg border border-slate-700">
+                    <div class="text-xs text-slate-400">総資産</div>
+                    <div id="stat-total-assets" class="text-2xl font-black text-emerald-400 mt-1">¥5,000,000</div>
+                </div>
+                <div class="bg-slate-900/80 p-4 rounded-lg border border-slate-700">
+                    <div class="text-xs text-slate-400">株式投資（評価額）</div>
+                    <div id="stat-stock-assets" class="text-2xl font-black text-blue-400 mt-1">¥2,000,000</div>
+                </div>
+                <div class="bg-slate-900/80 p-4 rounded-lg border border-slate-700">
+                    <div class="text-xs text-slate-400">現金</div>
+                    <div id="stat-cash" class="text-2xl font-black text-slate-200 mt-1">¥3,000,000</div>
+                </div>
+                <div class="bg-slate-900/80 p-4 rounded-lg border border-slate-700">
+                    <div class="text-xs text-slate-400">メンタル</div>
+                    <div class="flex items-center space-x-2 mt-1">
+                        <div class="flex-1 bg-slate-700 h-4 rounded-full overflow-hidden">
+                            <div id="mental-bar" class="bg-amber-500 h-full transition-all duration-300" style="width: 100%;"></div>
+                        </div>
+                        <span id="stat-mental" class="text-sm font-bold text-amber-400">100%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- チャート＆マーケット情報 -->
+            <div class="bg-slate-900 p-4 rounded-lg border border-slate-700 flex flex-col space-y-2">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="font-semibold text-slate-300">📊 資産推移 & 日経平均株価 (2ヶ月ごとに変動)</span>
+                    <span class="text-xs text-slate-400">日経平均: <strong id="stat-nikkei" class="text-slate-200">¥38,500</strong></span>
+                </div>
+                <div class="relative w-full h-48 bg-slate-950 rounded border border-slate-800 overflow-hidden">
+                    <canvas id="assetChart" class="w-full h-full"></canvas>
+                </div>
+            </div>
+
+            <!-- 時間コントロール -->
+            <div class="flex flex-wrap items-center justify-between bg-slate-900 px-6 py-3 rounded-lg border border-slate-700 gap-4">
+                <div class="flex items-center space-x-2">
+                    <button id="btn-pause" onclick="setSpeed(0)" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-sm font-bold transition cursor-pointer">一時停止</button>
+                    <button id="btn-speed-1" onclick="setSpeed(1)" class="px-3 py-1.5 bg-amber-600 rounded text-sm font-bold transition cursor-pointer">1倍速</button>
+                    <button id="btn-speed-2" onclick="setSpeed(2)" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-sm font-bold transition cursor-pointer">2倍速</button>
+                </div>
+                <div class="text-xs text-slate-400">
+                    ※5秒で1ヶ月進行 (1倍速時)
+                </div>
+            </div>
+        </div>
+
+        <!-- エンディング画面 (初期非表示) -->
+        <div id="end-screen" class="hidden p-8 flex flex-col items-center justify-center text-center space-y-6">
+            <h2 class="text-3xl font-black text-amber-400">🏁 30年の投資人生が終了しました</h2>
+            <div id="end-summary" class="bg-slate-900 p-6 rounded-lg border border-slate-700 w-full max-w-lg text-left space-y-3">
+                <!-- 結果サマリー -->
+            </div>
+            <button onclick="resetGame()" class="bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold px-8 py-3 rounded-lg shadow-lg transition duration-200 cursor-pointer">
+                もう一度最初から挑戦する
+            </button>
+        </div>
+    </div>
+
+    <!-- イベントモーダル（選択肢あり / なし共通） -->
+    <div id="event-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm hidden flex items-center justify-center p-4 z-50">
+        <div class="bg-slate-800 border border-slate-700 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div id="event-category" class="text-xs font-bold text-amber-400 uppercase tracking-widest">毎月の出来事</div>
+            <h3 id="event-title" class="text-xl font-bold text-white">イベントタイトル</h3>
+            <p id="event-description" class="text-slate-300 text-sm leading-relaxed">ここにイベントの詳細な文章が入ります。</p>
+            <div id="event-choices" class="space-y-3 pt-2">
+                <!-- 選択肢または「次へ」ボタンが動的挿入されます -->
+            </div>
+        </div>
+    </div>
+
+    <!-- JavaScript ロジック -->
+    <script>
+        // ゲームステート
+        let state = {
+            age: 25,
+            month: 0,
+            totalMonths: 0,
+            cash: 3000000,
+            stock: 2000000,
+            mental: 100,
+            nikkei: 38500,
+            speed: 1, // 0: pause, 1, 2
+            timer: null,
+            history: [],
+            activeTheme: 'normal'
+        };
+
+        const canvas = document.getElementById('assetChart');
+        const ctx = canvas.getContext('2d');
+
+        function startGame() {
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('game-screen').classList.remove('hidden');
+            
+            recordHistory();
+            updateUI();
+            startTimer();
+        }
+
+        function setSpeed(s) {
+            state.speed = s;
+            ['pause', 'speed-1', 'speed-2'].forEach(id => {
+                document.getElementById(`btn-${id}`).className = "px-3 py-1.5 bg-slate-700 hover:bg-slate-600 rounded text-sm font-bold transition cursor-pointer";
+            });
+            if (s === 0) document.getElementById('btn-pause').className = "px-3 py-1.5 bg-amber-600 rounded text-sm font-bold transition cursor-pointer";
+            if (s === 1) document.getElementById('btn-speed-1').className = "px-3 py-1.5 bg-amber-600 rounded text-sm font-bold transition cursor-pointer";
+            if (s === 2) document.getElementById('btn-speed-2').className = "px-3 py-1.5 bg-amber-600 rounded text-sm font-bold transition cursor-pointer";
+            
+            startTimer();
+        }
+
+        function startTimer() {
+            if (state.timer) clearInterval(state.timer);
+            if (state.speed === 0) return;
+
+            // 1倍速 = 5秒(5000ms)で1ヶ月。2倍速 = 2500ms
+            const interval = 5000 / state.speed;
+            state.timer = setInterval(() => {
+                advanceMonth();
+            }, interval);
+        }
+
+        function advanceMonth() {
+            state.month++;
+            state.totalMonths++;
+            if (state.month >= 12) {
+                state.month = 0;
+                state.age++;
+            }
+
+            // 終了チェック (55歳到達または破産)
+            let totalAssets = state.cash + state.stock;
+            if (state.age >= 55 || totalAssets <= 0 || state.mental <= 0) {
+                endGame(totalAssets <= 0 ? 'bankruptcy' : 'complete');
+                return;
+            }
+
+            // 【日経平均・株価の変動】2ヶ月ごとに値動きさせる
+            if (state.totalMonths % 2 === 0) {
+                let marketChangeRate = (Math.random() - 0.48) * 0.06; // -2.8% 〜 +3.2%
+                if (state.activeTheme === 'growth') marketChangeRate = (Math.random() - 0.45) * 0.10;
+                if (state.activeTheme === 'defense') marketChangeRate = (Math.random() - 0.49) * 0.025;
+
+                state.nikkei = Math.max(10000, Math.round(state.nikkei * (1 + marketChangeRate)));
+                state.stock = Math.max(0, Math.round(state.stock * (1 + marketChangeRate)));
+                recordHistory();
+            }
+
+            // メンタルの自然回復
+            if (state.mental < 100 && Math.random() < 0.3) {
+                state.mental = Math.min(100, state.mental + 2);
+            }
+
+            updateUI();
+
+            // 【イベント発生処理】
+            // 3ヶ月に1回は選択肢イベント、それ以外の月は1ヶ月ごとの選択肢なしイベント
+            if (state.totalMonths % 3 === 0) {
+                triggerChoiceEvent();
+            } else {
+                triggerAutoEvent();
+            }
+        }
+
+        function recordHistory() {
+            state.history.push({
+                ageStr: `${state.age}歳${state.month}ヶ月`,
+                total: state.cash + state.stock,
+                stock: state.stock,
+                nikkei: state.nikkei
+            });
+            if (state.history.length > 50) state.history.shift();
+            drawChart();
+        }
+
+        function updateUI() {
+            let total = state.cash + state.stock;
+            document.getElementById('stat-total-assets').innerText = `¥${total.toLocaleString()}`;
+            document.getElementById('stat-stock-assets').innerText = `¥${state.stock.toLocaleString()}`;
+            document.getElementById('stat-cash').innerText = `¥${state.cash.toLocaleString()}`;
+            document.getElementById('stat-mental').innerText = `${state.mental}%`;
+            document.getElementById('mental-bar').style.width = `${state.mental}%`;
+            document.getElementById('stat-nikkei').innerText = `¥${state.nikkei.toLocaleString()}`;
+            
+            let years = Math.floor(state.totalMonths / 12);
+            let months = state.totalMonths % 12;
+            document.getElementById('age-display').innerHTML = `${state.age}歳${state.month}ヶ月 <span class="text-xs text-slate-400">(経過: ${years}年${months}ヶ月)</span>`;
+        }
+
+        function drawChart() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            let w = canvas.width;
+            let h = canvas.height;
+
+            ctx.clearRect(0, 0, w, h);
+            if (state.history.length < 2) return;
+
+            let maxVal = Math.max(...state.history.map(h => h.total), 10000000);
+            let minVal = Math.min(...state.history.map(h => h.total), 0);
+            let range = maxVal - minVal || 1;
+
+            ctx.beginPath();
+            ctx.strokeStyle = '#34d399';
+            ctx.lineWidth = 2;
+            state.history.forEach((pt, i) => {
+                let x = (i / (state.history.length - 1)) * w;
+                let y = h - ((pt.total - minVal) / range) * (h - 20) - 10;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+        }
+
+        // --- 毎月のイベント（選択肢なし）プール ---
+        const autoEventPool = [
+            { title: "平穏な経済ニュース", desc: "今月は特に大きな経済指標の発表もなく、マーケットは静かな値動きを見せています。" },
+            { title: "日銀の金融政策会合", desc: "日銀総裁の発言に市場が一時ざわつきましたが、実体経済への影響は限定的でした。" },
+            { title: "街での株の噂話", desc: "カフェで隣のサラリーマンが「最近の相場は難しい」と愚痴をこぼしているのが聞こえました。" },
+            { title: "口座アプリのチェック", desc: "スマートフォンで証券口座の残高を眺めつつ、今夜の夕食のメニューを考えました。" },
+            { title: "ちょっとした節約生活", desc: "今月は外食を控えめにして、コツコツと現金を温存しました。" },
+            { title: "季節の変わり目", desc: "季節の変わり目で少し体調を崩しそうになりましたが、すぐに持ち直しました。" }
+        ];
+
+        function triggerAutoEvent() {
+            if (state.speed > 0) setSpeed(0); // 一時停止
+
+            const modal = document.getElementById('event-modal');
+            const catEl = document.getElementById('event-category');
+            const titleEl = document.getElementById('event-title');
+            const descEl = document.getElementById('event-description');
+            const choicesEl = document.getElementById('event-choices');
+
+            catEl.innerText = "📅 毎月の出来事（選択なし）";
+            const ev = autoEventPool[Math.floor(Math.random() * autoEventPool.length)];
+            titleEl.innerText = ev.title;
+            descEl.innerText = ev.desc;
+
+            choicesEl.innerHTML = '';
+            let btn = document.createElement('button');
+            btn.className = "w-full text-center bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold p-3 rounded-lg text-sm transition duration-150 cursor-pointer";
+            btn.innerText = "確認して次へ進む";
+            btn.onclick = () => {
+                modal.classList.add('hidden');
+                setSpeed(1); // 1倍速で再開
+            };
+            choicesEl.appendChild(btn);
+
+            modal.classList.remove('hidden');
+        }
+
+        // --- 3ヶ月ごとの選択肢イベントプール ---
+        const choiceEventPool = [
+            {
+                category: "【テーマ・セクター投資】",
+                title: "どのセクターに資金を集中させますか？",
+                desc: "現在のマーケットにおいて、次の一手をどのテーマに張るかが問われています。",
+                choices: [
+                    { text: "半導体・AI・データセンター関連株に集中投資", effect: () => { state.activeTheme = 'growth'; state.stock = Math.round(state.stock * 1.05); return "先端半導体株に資金をシフトしました。ハイリスク・ハイリターン路線です。"; } },
+                    { text: "高配当・大型ディフェンシブ株で手堅く運用", effect: () => { state.activeTheme = 'defense'; state.cash += 200000; state.mental = Math.min(100, state.mental + 5); return "ディフェンシブ銘柄へシフトし、配当と精神的安定を得ました。"; } },
+                    { text: "現金比率を高めて次の暴落に備えて静観", effect: () => { state.activeTheme = 'normal'; state.cash += 500000; state.stock = Math.max(0, state.stock - 300000); return "ポジションを縮小し、キャッシュを厚くしました。"; } }
+                ]
+            },
+            {
+                category: "【テクニカル・目標値シグナル】",
+                title: "保有株がテクニカル上の節目に到達！",
+                desc: "N計算値・E計算値の目標ターゲット、または重要な移動平均線にタッチしました。",
+                choices: [
+                    { text: "目標値到達！利益確定して半分を現金化する", effect: () => { let profit = Math.round(state.stock * 0.3); state.cash += profit; state.stock -= profit; state.mental = Math.min(100, state.mental + 10); return "見事な利食い成功！現金が増え、精神的余裕が生まれました。"; } },
+                    { text: "さらに強気でトレンドに乗る（ナンピン買い増し）", effect: () => { if(state.cash >= 400000) { state.cash -= 400000; state.stock += 500000; return "追加資金を投入し、保有株数を増やしました。"; } else { return "現金不足で買い増しできませんでした。"; } } },
+                    { text: "何もしずホールドを続ける", effect: () => { state.mental -= 2; return "チャートの揺れを耐え忍び、ホールド継続します。"; } }
+                ]
+            },
+            {
+                category: "【SNS煽り屋】",
+                title: "SNSで「モンキー田中」が特定銘柄を猛烈に煽っている！",
+                desc: "「この銘柄は次世代のテンバガー間違いなし！」とバズっているイナゴ銘柄を発見。どうしますか？",
+                choices: [
+                    { text: "乗るしかない！全額近くを突っ込む（イナゴ買い）", effect: () => {
+                        let isWin = Math.random() < 0.3; // 30%勝ち、70%大損
+                        if(isWin) {
+                            let gain = Math.round(state.stock * 0.5);
+                            state.stock += gain;
+                            return "奇跡的に売り抜け成功！短期で大きな利益を獲得しました！";
+                        } else {
+                            let loss = Math.round(state.stock * 0.70);
+                            state.stock -= loss;
+                            state.mental -= 40;
+                            return "イナゴタワー崩壊！高値掴みさせられ、70%の資産とメンタルが大打撃を受けました……。";
+                        }
+                    }},
+                    { text: "怪しいので完全無視する", effect: () => { state.mental = Math.min(100, state.mental + 5); return "冷静にスルーしました。賢明な判断です。"; }}
+                ]
+            },
+            {
+                category: "【インサイダー取引の誘惑】",
+                title: "会社に忍び込み、未公開の重要機密情報を盗み見た！",
+                desc: "こっそり社内の資料室に忍び込み、競合を揺るがす極秘のM&A・好決算情報を発見。これを使えば確実に大儲けできるが……？",
+                choices: [
+                    { text: "誘惑に負け、全財産を投じてインサイダー取引を行う", effect: () => {
+                        state.stock = Math.max(0, state.stock - Math.round(state.stock * 0.8));
+                        state.cash = Math.max(0, state.cash - Math.round(state.cash * 0.8));
+                        state.mental = 10;
+                        return "【御用】証券取引等監視委員会にマークされ、インサイダー取引で摘発！巨額の課徴金と罰金で資産の8割が吹き飛び、メンタルは崩壊寸前に……！";
+                    }},
+                    { text: "犯罪に手を染めるわけにはいかない。すぐ忘れる", effect: () => { state.mental = Math.min(100, state.mental + 10); return "良心に従い、誘惑に打ち勝ちました。コンプライアンスは大事です。"; }}
+                ]
+            }
+        ];
+
+        function triggerChoiceEvent() {
+            if (state.speed > 0) setSpeed(0); // 一時停止
+
+            const modal = document.getElementById('event-modal');
+            const catEl = document.getElementById('event-category');
+            const titleEl = document.getElementById('event-title');
+            const descEl = document.getElementById('event-description');
+            const choicesEl = document.getElementById('event-choices');
+
+            const ev = choiceEventPool[Math.floor(Math.random() * choiceEventPool.length)];
+            catEl.innerText = ev.category;
+            titleEl.innerText = ev.title;
+            descEl.innerText = ev.desc;
+
+            choicesEl.innerHTML = '';
+            ev.choices.forEach(ch => {
+                let btn = document.createElement('button');
+                btn.className = "w-full text-left bg-slate-900 hover:bg-slate-700 border border-slate-700 p-3 rounded-lg text-sm transition duration-150 cursor-pointer text-slate-200 font-medium";
+                btn.innerText = ch.text;
+                btn.onclick = () => {
+                    let resultMsg = ch.effect();
+                    modal.classList.add('hidden');
+                    alert(resultMsg);
+                    updateUI();
+                    recordHistory();
+                    setSpeed(1); // 1倍速で再開
+                };
+                choicesEl.appendChild(btn);
+            });
+
+            modal.classList.remove('hidden');
+        }
+
+        function endGame(type) {
+            if (state.timer) clearInterval(state.timer);
+            document.getElementById('game-screen').classList.add('hidden');
+            document.getElementById('end-screen').classList.remove('hidden');
+
+            let total = state.cash + state.stock;
+            let profitRate = ((total - 5000000) / 5000000) * 100;
+            
+            let archetype = "堅実なインデックス投資家";
+            if (profitRate > 100) archetype = "伝説の億り人・相場の魔術師";
+            else if (profitRate < -30) archetype = "退場寸前の波乱万丈トレーダー";
+            else if (state.mental < 40) archetype = "メンタル崩壊の損切り貧乏";
+
+            let summaryHtml = `
+                <div class="space-y-2 text-sm">
+                    <p><strong>終了理由：</strong> ${type === 'bankruptcy' ? '資産またはメンタルが限界を迎え破産・退場' : '30年間の投資人生完走（55歳到達）'}</p>
+                    <p><strong>最終総資産：</strong> ¥${total.toLocaleString()}</p>
+                    <p><strong>トータル損益率：</strong> <span class="${profitRate >= 0 ? 'text-emerald-400' : 'text-rose-400'} font-bold">${profitRate.toFixed(1)}%</span></p>
+                    <p><strong>投資家タイプ診断：</strong> <span class="text-amber-400 font-bold">${archetype}</span></p>
+                </div>
+            `;
+            document.getElementById('end-summary').innerHTML = summaryHtml;
+        }
+
+        function resetGame() {
+            state = {
+                age: 25,
+                month: 0,
+                totalMonths: 0,
+                cash: 3000000,
+                stock: 2000000,
+                mental: 100,
+                nikkei: 38500,
+                speed: 1,
+                timer: null,
+                history: [],
+                activeTheme: 'normal'
+            };
+            document.getElementById('end-screen').classList.add('hidden');
+            startGame();
+        }
+    </script>
+</body>
+</html>
